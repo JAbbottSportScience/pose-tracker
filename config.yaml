@@ -1,0 +1,35 @@
+camera:
+  source: "0"  # 0 for webcam, path for video, rtsp:// for stream
+  source_2: null  # Second camera for stereo
+  width: 1280
+  height: 720
+  fps: 30
+
+pose:
+  model: "yolov11n-pose.pt"  # n, s, m, l, x
+  confidence: 0.5
+  device: "mps"  # mps, cuda, cpu
+
+stereo:
+  calibration_file: null  # Path to stereo_calibration.json
+  enabled: false
+
+metrics:
+  show_angles: true
+  show_distances: true
+  log_to_csv: false
+  csv_path: "data/recordings/"
+
+recording:
+  output_path: "data/recordings/"
+  format: "mp4"
+  include_overlay: true
+
+ui:
+  theme: "dark"
+  show_skeleton: true
+  show_keypoints: true
+  show_3d_view: false
+
+players:
+  database_path: "data/headshots/"
