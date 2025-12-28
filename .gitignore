@@ -1,4 +1,3 @@
 venv
-yolo*
+yolo*.pt
 data
-yolo11x-pose.pt
