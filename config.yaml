@@ -1,35 +1,26 @@
 camera:
-  source: "0"  # 0 for webcam, path for video, rtsp:// for stream
-  source_2: null  # Second camera for stereo
-  width: 1280
-  height: 720
   fps: 30
-
-pose:
-  model: "yolov11n-pose.pt"  # n, s, m, l, x
-  confidence: 0.5
-  device: "mps"  # mps, cuda, cpu
-
-stereo:
-  calibration_file: null  # Path to stereo_calibration.json
-  enabled: false
-
+  height: 720
+  source: '0'
+  source_2: null
+  width: 1280
 metrics:
+  log_to_csv: false
   show_angles: true
   show_distances: true
-  log_to_csv: false
-  csv_path: "data/recordings/"
-
+pose:
+  confidence: 0.5
+  device: mps
+  model: yolo11x-pose.pt
 recording:
-  output_path: "data/recordings/"
-  format: "mp4"
+  format: mp4
   include_overlay: true
-
+  output_path: data/recordings/
+stereo:
+  calibration_file: null
+  enabled: false
 ui:
-  theme: "dark"
-  show_skeleton: true
-  show_keypoints: true
   show_3d_view: false
-
-players:
-  database_path: "data/headshots/"
+  show_keypoints: true
+  show_skeleton: true
+  theme: dark
