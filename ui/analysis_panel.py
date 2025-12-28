@@ -25,7 +25,13 @@ from typing import Optional, List, Dict, Tuple
 from dataclasses import dataclass
 
 import matplotlib
-matplotlib.use('QtAgg')
+# Only set backend if not already set to a Qt backend
+try:
+    current_backend = matplotlib.get_backend()
+    if 'Qt' not in current_backend:
+        matplotlib.use('QtAgg')
+except Exception:
+    matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -496,6 +502,11 @@ class AnalysisPanel(QWidget):
         session_layout.addStretch()
         layout.addLayout(session_layout)
         
+        # Status label showing current path
+        self.path_label = QLabel()
+        self.path_label.setStyleSheet("color: #666; font-size: 11px;")
+        layout.addWidget(self.path_label)
+        
         # Main content splitter
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
         layout.addWidget(main_splitter, stretch=1)
@@ -550,29 +561,52 @@ class AnalysisPanel(QWidget):
     
     def _refresh_sessions(self):
         """Refresh list of available sessions"""
-        self.session_combo.clear()
-        self.comparison_combo.clear()
-        self.comparison_combo.addItem("None")
-        
-        if not self.recordings_path.exists():
-            return
-        
-        sessions = []
-        
-        # Look for session directories
-        for session_dir in sorted(self.recordings_path.iterdir(), reverse=True):
-            if session_dir.is_dir():
-                csv_files = list(session_dir.glob("*.csv"))
-                if csv_files:
-                    sessions.append(session_dir.name)
-        
-        # Also look for loose CSV files
-        for csv_file in sorted(self.recordings_path.glob("*.csv"), reverse=True):
-            sessions.append(csv_file.stem)
-        
-        for session in sessions:
-            self.session_combo.addItem(session)
-            self.comparison_combo.addItem(session)
+        try:
+            self.session_combo.clear()
+            self.comparison_combo.clear()
+            self.comparison_combo.addItem("None")
+            
+            # Show current path in UI
+            abs_path = self.recordings_path.absolute()
+            self.path_label.setText(f"📁 {abs_path}")
+            print(f"[Analysis] Looking for sessions in: {abs_path}")
+            
+            if not self.recordings_path.exists():
+                print(f"[Analysis] Path does not exist: {self.recordings_path}")
+                self.session_combo.addItem("(No recordings folder found)")
+                self.path_label.setText(f"⚠️ Path not found: {abs_path}")
+                return
+            
+            sessions = []
+            
+            # Look for session directories (e.g., session_20241228_123456/)
+            for item in sorted(self.recordings_path.iterdir(), reverse=True):
+                if item.is_dir():
+                    # Check for CSV files inside directory
+                    csv_files = list(item.glob("*.csv"))
+                    if csv_files:
+                        sessions.append(item.name)
+                        print(f"[Analysis] Found session dir: {item.name} with {len(csv_files)} CSV(s)")
+                elif item.suffix.lower() == '.csv':
+                    # Loose CSV file in recordings folder
+                    sessions.append(item.stem)
+                    print(f"[Analysis] Found loose CSV: {item.name}")
+            
+            if not sessions:
+                self.session_combo.addItem("(No sessions found)")
+                self.path_label.setText(f"📁 {abs_path} (empty)")
+                print(f"[Analysis] No sessions found in {self.recordings_path}")
+            else:
+                for session in sessions:
+                    self.session_combo.addItem(session)
+                    self.comparison_combo.addItem(session)
+                self.path_label.setText(f"📁 {abs_path} ({len(sessions)} sessions)")
+                print(f"[Analysis] Loaded {len(sessions)} sessions")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[Analysis] Error refreshing sessions: {e}")
+            self.path_label.setText(f"⚠️ Error: {e}")
     
     def _browse_session(self):
         """Browse for a session CSV file"""
@@ -587,21 +621,36 @@ class AnalysisPanel(QWidget):
     
     def _load_session(self, session_name: str):
         """Load a session by name"""
-        if not session_name:
+        if not session_name or session_name.startswith("("):
+            # Skip placeholder items
             return
         
-        # Try session directory first
+        print(f"[Analysis] Loading session: {session_name}")
+        
+        # Try session directory first (e.g., data/recordings/session_xxx/)
         session_dir = self.recordings_path / session_name
-        if session_dir.exists():
+        if session_dir.exists() and session_dir.is_dir():
             csv_files = list(session_dir.glob("*.csv"))
             if csv_files:
+                print(f"[Analysis] Found CSV in session dir: {csv_files[0]}")
                 self._load_session_from_path(csv_files[0])
                 return
         
-        # Try loose CSV
+        # Try loose CSV in recordings folder
         csv_path = self.recordings_path / f"{session_name}.csv"
         if csv_path.exists():
+            print(f"[Analysis] Found loose CSV: {csv_path}")
             self._load_session_from_path(csv_path)
+            return
+        
+        # Try exact match (session_name might already include .csv)
+        csv_path = self.recordings_path / session_name
+        if csv_path.exists() and csv_path.suffix == '.csv':
+            print(f"[Analysis] Found exact CSV: {csv_path}")
+            self._load_session_from_path(csv_path)
+            return
+        
+        print(f"[Analysis] Could not find session: {session_name}")
     
     def _load_session_from_path(self, csv_path: Path):
         """Load session from CSV path"""

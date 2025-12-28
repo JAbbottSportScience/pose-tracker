@@ -18,12 +18,34 @@ Usage:
 import sys
 import argparse
 import yaml
+import traceback
 from pathlib import Path
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QColor
 
 from ui import MainWindow
+
+
+def exception_hook(exc_type, exc_value, exc_tb):
+    """Global exception handler to prevent PyQt6 crashes"""
+    # Print to console
+    traceback.print_exception(exc_type, exc_value, exc_tb)
+    
+    # Format error message
+    error_msg = ''.join(traceback.format_exception(exc_type, exc_value, exc_tb))
+    print(f"\n[ERROR] Unhandled exception:\n{error_msg}")
+    
+    # Try to show dialog (may fail if Qt is in bad state)
+    try:
+        QMessageBox.critical(None, "Error", 
+                            f"An error occurred:\n\n{exc_value}\n\nSee console for details.")
+    except Exception:
+        pass  # Qt might be in a bad state
+
+
+# Install global exception handler
+sys.excepthook = exception_hook
 
 
 def load_config(config_path: str = 'config.yaml') -> dict:
