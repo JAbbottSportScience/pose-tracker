@@ -15,6 +15,7 @@ from .settings_dialog import SettingsDialog
 from .player_dialog import PlayerDialog, QuickTagDialog
 from .view_3d_widget import View3DWidget
 from .dual_view_widget import DualViewWidget, TripleViewWidget
+from .analysis_panel import AnalysisPanel
 
 from core import (VideoSource, DualCameraSource, PoseEstimator, MetricsCalculator,
                   StereoTriangulator, Metrics3DCalculator, SessionRecorder, 
@@ -43,6 +44,7 @@ class MainWindow(QMainWindow):
         # State
         self._is_playing = False
         self._is_stereo_mode = False
+        self._is_analysis_mode = False
         self._fps_counter = 0
         self._fps_time = time.time()
         self._current_fps = 0
@@ -86,6 +88,12 @@ class MainWindow(QMainWindow):
         # Triple view (dual + 3D)
         self.triple_view = TripleViewWidget()
         self.view_stack.addWidget(self.triple_view)
+        
+        # Analysis panel (index 3)
+        self.analysis_panel = AnalysisPanel(
+            recordings_path=self.config.get('recording', {}).get('output_path', 'data/recordings')
+        )
+        self.view_stack.addWidget(self.analysis_panel)
         
         # Left layout with views and controls
         left_widget = QWidget()
@@ -179,6 +187,14 @@ class MainWindow(QMainWindow):
         players_action = QAction("👤 Players", self)
         players_action.triggered.connect(self._open_player_manager)
         toolbar.addAction(players_action)
+        
+        toolbar.addSeparator()
+        
+        # Analysis mode
+        self.analysis_action = QAction("📊 Analysis", self)
+        self.analysis_action.setCheckable(True)
+        self.analysis_action.triggered.connect(self._toggle_analysis_mode)
+        toolbar.addAction(self.analysis_action)
         
         toolbar.addSeparator()
         
@@ -462,6 +478,55 @@ class MainWindow(QMainWindow):
                 self.view_stack.setCurrentIndex(2)  # Triple view
             else:
                 self.view_stack.setCurrentIndex(1)  # Dual view
+    
+    def _toggle_analysis_mode(self, checked: bool):
+        """Toggle analysis mode"""
+        if checked:
+            # Stop any active playback
+            self._stop_playback()
+            
+            # Switch to analysis panel
+            self._is_analysis_mode = True
+            self.view_stack.setCurrentIndex(3)  # Analysis panel
+            
+            # Hide metrics panel (analysis has its own)
+            self.metrics_panel.hide()
+            
+            # Refresh analysis panel session list
+            self.analysis_panel.set_recordings_path(
+                self.config.get('recording', {}).get('output_path', 'data/recordings')
+            )
+            
+            # Update status
+            self.status_bar.showMessage("Analysis Mode - Review recorded sessions")
+            
+            # Disable playback controls
+            self.play_btn.setEnabled(False)
+            self.stop_btn.setEnabled(False)
+            self.record_btn.setEnabled(False)
+            self.seek_slider.setEnabled(False)
+        else:
+            # Return to live mode
+            self._is_analysis_mode = False
+            
+            # Show metrics panel
+            self.metrics_panel.show()
+            
+            # Return to appropriate view
+            if self._is_stereo_mode:
+                if self.view_3d_action.isChecked():
+                    self.view_stack.setCurrentIndex(2)
+                else:
+                    self.view_stack.setCurrentIndex(1)
+            else:
+                self.view_stack.setCurrentIndex(0)
+            
+            # Re-enable controls
+            self.play_btn.setEnabled(True)
+            self.stop_btn.setEnabled(True)
+            self.record_btn.setEnabled(True)
+            
+            self.status_bar.showMessage("Ready - Open a video or connect to camera")
     
     # --- Frame Processing ---
     
