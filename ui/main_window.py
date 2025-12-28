@@ -481,52 +481,58 @@ class MainWindow(QMainWindow):
     
     def _toggle_analysis_mode(self, checked: bool):
         """Toggle analysis mode"""
-        if checked:
-            # Stop any active playback
-            self._stop_playback()
-            
-            # Switch to analysis panel
-            self._is_analysis_mode = True
-            self.view_stack.setCurrentIndex(3)  # Analysis panel
-            
-            # Hide metrics panel (analysis has its own)
-            self.metrics_panel.hide()
-            
-            # Refresh analysis panel session list
-            self.analysis_panel.set_recordings_path(
-                self.config.get('recording', {}).get('output_path', 'data/recordings')
-            )
-            
-            # Update status
-            self.status_bar.showMessage("Analysis Mode - Review recorded sessions")
-            
-            # Disable playback controls
-            self.play_btn.setEnabled(False)
-            self.stop_btn.setEnabled(False)
-            self.record_btn.setEnabled(False)
-            self.seek_slider.setEnabled(False)
-        else:
-            # Return to live mode
-            self._is_analysis_mode = False
-            
-            # Show metrics panel
-            self.metrics_panel.show()
-            
-            # Return to appropriate view
-            if self._is_stereo_mode:
-                if self.view_3d_action.isChecked():
-                    self.view_stack.setCurrentIndex(2)
-                else:
-                    self.view_stack.setCurrentIndex(1)
+        try:
+            if checked:
+                # Stop any active playback
+                self._stop_playback()
+                
+                # Switch to analysis panel
+                self._is_analysis_mode = True
+                self.view_stack.setCurrentIndex(3)  # Analysis panel
+                
+                # Hide metrics panel (analysis has its own)
+                self.metrics_panel.hide()
+                
+                # Refresh analysis panel session list
+                self.analysis_panel.set_recordings_path(
+                    self.config.get('recording', {}).get('output_path', 'data/recordings')
+                )
+                
+                # Update status
+                self.status_bar.showMessage("Analysis Mode - Review recorded sessions")
+                
+                # Disable playback controls
+                self.play_btn.setEnabled(False)
+                self.stop_btn.setEnabled(False)
+                self.record_btn.setEnabled(False)
+                self.seek_slider.setEnabled(False)
             else:
-                self.view_stack.setCurrentIndex(0)
-            
-            # Re-enable controls
-            self.play_btn.setEnabled(True)
-            self.stop_btn.setEnabled(True)
-            self.record_btn.setEnabled(True)
-            
-            self.status_bar.showMessage("Ready - Open a video or connect to camera")
+                # Return to live mode
+                self._is_analysis_mode = False
+                
+                # Show metrics panel
+                self.metrics_panel.show()
+                
+                # Return to appropriate view
+                if self._is_stereo_mode:
+                    if self.view_3d_action.isChecked():
+                        self.view_stack.setCurrentIndex(2)
+                    else:
+                        self.view_stack.setCurrentIndex(1)
+                else:
+                    self.view_stack.setCurrentIndex(0)
+                
+                # Re-enable controls
+                self.play_btn.setEnabled(True)
+                self.stop_btn.setEnabled(True)
+                self.record_btn.setEnabled(True)
+                
+                self.status_bar.showMessage("Ready - Open a video or connect to camera")
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[Error] Analysis mode toggle failed: {e}")
+            self.status_bar.showMessage(f"Error: {e}")
     
     # --- Frame Processing ---
     
@@ -704,15 +710,21 @@ class MainWindow(QMainWindow):
     
     def _open_settings(self):
         """Open settings dialog"""
-        dialog = SettingsDialog(self.config, self)
-        if dialog.exec():
-            self.config = dialog.get_config()
-            self._init_pose_model()
-            self._load_stereo_calibration()
-            
-            # Save config
-            with open('config.yaml', 'w') as f:
-                yaml.dump(self.config, f, default_flow_style=False)
+        try:
+            dialog = SettingsDialog(self.config, self)
+            if dialog.exec():
+                self.config = dialog.get_config()
+                self._init_pose_model()
+                self._load_stereo_calibration()
+                
+                # Save config
+                with open('config.yaml', 'w') as f:
+                    yaml.dump(self.config, f, default_flow_style=False)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[Error] Settings dialog failed: {e}")
+            QMessageBox.warning(self, "Settings Error", f"Failed to apply settings: {e}")
     
     # --- Cleanup ---
     

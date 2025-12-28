@@ -5,7 +5,7 @@ camera:
   source_2: null
   width: 1280
 metrics:
-  log_to_csv: false
+  log_to_csv: true
   show_angles: true
   show_distances: true
 pose:
