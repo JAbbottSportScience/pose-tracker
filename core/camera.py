@@ -171,10 +171,36 @@ class DualCameraSource:
         self._running = False
     
     def start(self) -> bool:
-        """Start both cameras"""
+        """Start both cameras with delay for RTSP streams"""
+        # Start camera 1
         ok1 = self.cam1.start()
+        if not ok1:
+            print(f"Failed to start camera 1: {self.cam1.source}")
+            return False
+        
+        # Wait for first frame from camera 1
+        for _ in range(50):  # 5 second timeout
+            if self.cam1.read() is not None:
+                break
+            time.sleep(0.1)
+        
+        # Small delay before opening second RTSP stream
+        time.sleep(0.5)
+        
+        # Start camera 2
         ok2 = self.cam2.start()
-        self._running = ok1 and ok2
+        if not ok2:
+            print(f"Failed to start camera 2: {self.cam2.source}")
+            self.cam1.stop()
+            return False
+        
+        # Wait for first frame from camera 2
+        for _ in range(50):  # 5 second timeout
+            if self.cam2.read() is not None:
+                break
+            time.sleep(0.1)
+        
+        self._running = self.cam1.is_opened and self.cam2.is_opened
         return self._running
     
     def read(self) -> Tuple[Optional[FrameData], Optional[FrameData]]:
