@@ -317,22 +317,27 @@ class MainWindow(QMainWindow):
     
     def _open_dual_cameras(self):
         """Open dual camera setup"""
-        # Get sources from config or prompt
-        cam_config = self.config.get('camera', {})
-        source1 = cam_config.get('source', '0')
-        source2 = cam_config.get('source_2', '')
+        # Prompt for first camera
+        source1, ok1 = QInputDialog.getText(
+            self, "First Camera", "Enter first camera source (RTSP URL or device number):",
+            text="rtsp://admin:pass@192.168.0.200:554/stream1"
+        )
+        if not ok1 or not source1:
+            return
         
-        if not source2:
-            source2, ok = QInputDialog.getText(
-                self, "Second Camera", "Enter second camera source (RTSP URL or device number):",
-                text="rtsp://admin:pass@192.168.0.201:554/stream1"
-            )
-            if not ok or not source2:
-                return
+        # Prompt for second camera
+        source2, ok2 = QInputDialog.getText(
+            self, "Second Camera", "Enter second camera source (RTSP URL or device number):",
+            text="rtsp://admin:pass@192.168.0.201:554/stream1"
+        )
+        if not ok2 or not source2:
+            return
         
         self._stop_playback()
-        
         self._is_stereo_mode = True
+        
+        # Get camera config for resolution/fps
+        cam_config = self.config.get('camera', {})
         
         # Determine view mode (with or without 3D)
         if self.triangulator and self.view_3d_action.isChecked():
